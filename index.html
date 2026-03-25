@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Simulador Libro XVIII - Móvil Optimizado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --blanco: #f8fafc;
+            --verde: #22c55e;
+            --rojo: #ef4444;
+            --amarillo: #eab308;
+            --hangar-bg: #0f172a;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--hangar-bg);
+            font-family: 'Inter', sans-serif;
+            color: #f1f5f9;
+        }
+
+        .app-wrapper {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background-image: 
+                linear-gradient(rgba(15, 23, 42, 0.97), rgba(15, 23, 42, 0.97)),
+                url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+        }
+
+        .header-panel {
+            font-family: 'Orbitron', sans-serif;
+            background: rgba(30, 41, 59, 0.9);
+            border-bottom: 2px solid #334155;
+            flex-shrink: 0;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 1rem;
+            gap: 1rem;
+            overflow: hidden;
+        }
+
+        /* Responsive Grid Logic */
+        @media (min-width: 1024px) {
+            .main-content {
+                display: grid;
+                grid-template-columns: 250px 1fr 250px;
+                align-items: center;
+            }
+            .zones-left, .zones-right { display: flex; flex-direction: column; gap: 1rem; height: 100%; }
+        }
+
+        @media (max-width: 1023px) {
+            .zones-container {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                grid-template-rows: 1fr 1fr;
+                gap: 0.5rem;
+                height: 45vh;
+                flex-shrink: 0;
+            }
+            .deck-area {
+                flex-grow: 1;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+        }
+
+        .drop-zone {
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border-radius: 1rem;
+            padding: 0.5rem;
+        }
+
+        .drop-zone.drag-over {
+            transform: scale(1.05);
+            border-color: #38bdf8;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            filter: brightness(1.2);
+        }
+
+        .case-card {
+            touch-action: none;
+            user-select: none;
+            background: #1e293b;
+            border: 1px solid #475569;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            width: 90%;
+            max-width: 400px;
+            z-index: 50;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+            padding: 1.5rem;
+        }
+
+        .hammer-anim { animation: slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes slam {
+            0% { transform: scale(2) rotate(-20deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        
+        <!-- HEADER -->
+        <header class="header-panel p-3 md:px-10 flex justify-between items-center shadow-xl">
+            <div class="flex flex-col">
+                <h1 class="text-sm md:text-xl font-black text-sky-400 uppercase tracking-tighter">Libro XVIII</h1>
+                <span id="case-counter" class="text-[9px] text-sky-500 font-bold bg-sky-500/10 px-2 py-0.5 rounded w-fit">EXP 1/30</span>
+            </div>
+
+            <div class="flex gap-2 md:gap-4 items-center bg-slate-900/80 p-2 rounded-xl border border-slate-700">
+                <div class="text-center px-2">
+                    <p class="text-[8px] text-emerald-500 font-bold uppercase">OK</p>
+                    <p id="score-hits" class="text-sm md:text-xl font-black">0</p>
+                </div>
+                <div class="text-center px-2">
+                    <p class="text-[8px] text-rose-500 font-bold uppercase">Multa</p>
+                    <p id="score-errors" class="text-sm md:text-xl font-black">0</p>
+                </div>
+                <div class="text-center px-2 hidden sm:block">
+                    <p class="text-[8px] text-amber-500 font-bold uppercase">Deuda</p>
+                    <p id="score-fines" class="text-[10px] md:text-sm font-black text-amber-400">B/. 0</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN -->
+        <main class="main-content">
+            
+            <!-- DECK AREA (TOP ON MOBILE) -->
+            <div class="deck-area">
+                <div id="card-deck" class="w-full flex justify-center">
+                    <!-- Cards injected here -->
+                </div>
+            </div>
+
+            <!-- ZONES CONTAINER (BOTTOM ON MOBILE, SIDES ON DESKTOP) -->
+            <div class="zones-container w-full grid grid-cols-2 lg:contents gap-2">
+                
+                <!-- BLANCO -->
+                <div id="target-blanca" class="drop-zone bg-white lg:h-48" data-zone="blanca">
+                    <span class="text-xl md:text-3xl">⚪</span>
+                    <h3 class="text-slate-900 font-black text-[9px] md:text-xs uppercase mt-1">Inspección</h3>
+                </div>
+
+                <!-- VERDE -->
+                <div id="target-verde" class="drop-zone bg-emerald-500 lg:h-48" data-zone="verde">
+                    <span class="text-xl md:text-3xl">🟢</span>
+                    <h3 class="text-white font-black text-[9px] md:text-xs uppercase mt-1">Reparación</h3>
+                </div>
+
+                <!-- ROJO -->
+                <div id="target-roja" class="drop-zone bg-rose-600 lg:h-48" data-zone="roja">
+                    <span class="text-xl md:text-3xl">🔴</span>
+                    <h3 class="text-white font-black text-[9px] md:text-xs uppercase mt-1">Rechazado</h3>
+                </div>
+
+                <!-- AMARILLO -->
+                <div id="target-amarilla" class="drop-zone bg-amber-400 lg:h-48" data-zone="amarilla">
+                    <span class="text-xl md:text-3xl">🟡</span>
+                    <h3 class="text-amber-950 font-black text-[9px] md:text-xs uppercase mt-1">Retorno</h3>
+                </div>
+
+            </div>
+
+        </main>
+
+        <footer class="h-6 bg-slate-900/50 flex items-center justify-center border-t border-slate-800 flex-shrink-0">
+            <p class="text-[7px] md:text-[9px] text-slate-500 uppercase tracking-widest font-semibold px-4 text-center">
+                Responsable Primario: Jefe de Taller (Art. 95 Libro XVIII)
+            </p>
+        </footer>
+    </div>
+
+    <!-- MODAL MULTA -->
+    <div id="modal-multa" class="modal-overlay">
+        <div class="bg-slate-900 border-t-4 border-rose-600 rounded-2xl p-6 md:p-10 max-w-sm w-full text-center">
+            <div class="text-6xl mb-4 hammer-anim">🔨</div>
+            <h2 class="text-xl font-black text-rose-500 uppercase mb-2">Multa AAC</h2>
+            <p id="multa-msg" class="text-slate-300 text-xs mb-4"></p>
+            <p id="multa-amount" class="text-3xl font-black text-white mb-6"></p>
+            <button onclick="closeModal('modal-multa')" class="w-full py-3 bg-rose-600 text-white font-bold rounded-xl uppercase text-xs">Aceptar</button>
+        </div>
+    </div>
+
+    <!-- MODAL FINAL -->
+    <div id="modal-final" class="modal-overlay">
+        <div class="bg-slate-900 border-2 border-sky-500/30 rounded-3xl p-8 max-w-sm w-full text-center">
+            <div class="text-5xl mb-4">✈️</div>
+            <h2 class="text-2xl font-black text-sky-400 uppercase mb-6">Fin de Auditoría</h2>
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="bg-emerald-500/10 p-4 rounded-xl">
+                    <p class="text-[8px] text-emerald-500 font-bold uppercase">Aciertos</p>
+                    <p id="final-hits" class="text-2xl font-black">0</p>
+                </div>
+                <div class="bg-rose-500/10 p-4 rounded-xl">
+                    <p class="text-[8px] text-rose-500 font-bold uppercase">Multas</p>
+                    <p id="final-errors" class="text-2xl font-black">0</p>
+                </div>
+            </div>
+            <button onclick="location.reload()" class="w-full py-4 bg-sky-600 text-white font-bold rounded-full uppercase text-xs">Reiniciar</button>
+        </div>
+    </div>
+
+    <script>
+        const cases = [
+            { id: 1, title: "Radio COM1", desc: "Radio nuevo recibido sin registro de inspección de entrada.", correct: "blanca" },
+            { id: 2, title: "Bomba Lycoming", desc: "Bomba con fuga activa detectada en inspección visual.", correct: "verde" },
+            { id: 3, title: "Perno de Ala", desc: "Perno estructural con fractura irreparable según SB 1304A.", correct: "roja" },
+            { id: 4, title: "Altímetro Digital", desc: "Pruebas satisfactorias y Formulario AAC 8130-3 listo.", correct: "amarilla" },
+            { id: 5, title: "FIRMA ILEGAL", desc: "Firma de RTS sin datos aprobados por presión del cliente.", correct: "multa" },
+            { id: 6, title: "Neumático", desc: "Desgaste por debajo de límites. Requiere reemplazo.", correct: "verde" },
+            { id: 7, title: "Línea de Vida", desc: "Manguera que superó su fecha de expiración.", correct: "roja" },
+            { id: 8, title: "Indicador Giro", desc: "Rotor destruido, sin capacidad técnica de reparación.", correct: "roja" },
+            { id: 9, title: "Motor Cont.", desc: "Overhaul probado en banco con parámetros correctos.", correct: "amarilla" },
+            { id: 10, title: "Magneto Bendix", desc: "Nuevo con empaque abierto y sin inspección técnica.", correct: "blanca" },
+            { id: 11, title: "Hélice Aluminio", desc: "Picaduras que requieren rectificación mecánica.", correct: "verde" },
+            { id: 12, title: "DATOS INVÁLIDOS", desc: "Reparación mayor basada en YouTube, no en manuales.", correct: "multa" },
+            { id: 13, title: "TORQUE", desc: "Uso de llave sin calibrar para pernos críticos.", correct: "multa" },
+            { id: 14, title: "BITÁCORA", desc: "Firmas de personal que no realizó el mantenimiento.", correct: "multa" },
+            { id: 15, title: "DIRECTRIZ (AD)", desc: "Se omite una AD obligatoria en la inspección.", correct: "multa" },
+            { id: 16, title: "Larguerillo", desc: "Corrosión Nivel 3 que excede límites estructurales.", correct: "roja" },
+            { id: 17, title: "Filtros Aire", desc: "Limpios e inspeccionados, listos para instalación.", correct: "amarilla" },
+            { id: 18, title: "Tren de Aterrizaje", desc: "Perno con fractura cristalina detectada por tintas.", correct: "roja" },
+            { id: 19, title: "Arnés Piloto", desc: "Reemplazo completado siguiendo la TSO.", correct: "amarilla" },
+            { id: 20, title: "Asientos", desc: "Tapicería reparada con material certificado.", correct: "amarilla" },
+            { id: 21, title: "Estructura", desc: "En proceso de aplicación de anticorrosivo Alodine.", correct: "verde" },
+            { id: 22, title: "Anual 100h", desc: "Inspección completada y discrepancias cerradas.", correct: "amarilla" },
+            { id: 23, title: "Pieza SUP", desc: "Componente sin documentos de trazabilidad.", correct: "roja" },
+            { id: 24, title: "Radio VHF", desc: "Transmisor con deriva de frecuencia detectada.", correct: "blanca" },
+            { id: 25, title: "Cilindro", desc: "Baja compresión enviado a rectificado.", correct: "verde" },
+            { id: 26, title: "Actuador", desc: "Fuga de líquido hidráulico por sellos degradados.", correct: "verde" },
+            { id: 27, title: "HÉLICE MOD", desc: "Pala cortada por taller no habilitado.", correct: "multa" },
+            { id: 28, title: "Bujías", desc: "Limpias, probadas y con luz ajustada.", correct: "amarilla" },
+            { id: 29, title: "SIN LICENCIA", desc: "Bitácora llena pero sin firma de técnico con licencia.", correct: "multa" },
+            { id: 30, title: "TORNILLERÍA", desc: "Uso de tornillos ferreteros en lugar de originales.", correct: "multa" }
+        ];
+
+        let currentIndex = 0, hits = 0, errors = 0, totalFine = 0, draggedElement = null;
+
+        function init() {
+            renderCard();
+            setupZones();
+        }
+
+        function renderCard() {
+            const container = document.getElementById('card-deck');
+            if (currentIndex >= cases.length) { showFinal(); return; }
+
+            const c = cases[currentIndex];
+            document.getElementById('case-counter').innerText = `EXP ${currentIndex + 1}/30`;
+            
+            container.innerHTML = `
+                <div id="active-card" class="case-card p-4 md:p-6 rounded-2xl flex flex-col relative" draggable="true">
+                    <h4 class="text-sm md:text-lg font-black text-white mb-2 uppercase italic border-b border-slate-700 pb-1 leading-tight">${c.title}</h4>
+                    <p class="text-slate-300 text-[10px] md:text-xs leading-relaxed mb-4">${c.desc}</p>
+                    <div class="mt-auto py-1 text-center border-t border-slate-700/50">
+                        <span class="text-[8px] text-slate-500 font-bold uppercase">Arrastra para clasificar</span>
+                    </div>
+                </div>
+            `;
+
+            const card = document.getElementById('active-card');
+            card.addEventListener('touchstart', handleTouchStart, {passive: false});
+            card.addEventListener('touchmove', handleTouchMove, {passive: false});
+            card.addEventListener('touchend', handleTouchEnd);
+        }
+
+        function setupZones() {
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', e => e.preventDefault());
+                zone.addEventListener('drop', e => process(zone.dataset.zone));
+            });
+        }
+
+        function process(zoneType) {
+            const current = cases[currentIndex];
+            if (current.correct === "multa") {
+                if (zoneType === 'amarilla') showFine("VIOLACIÓN GRAVE: Intento de retorno al servicio ilegal.");
+                else { hits++; next(); }
+                return;
+            }
+            if (zoneType === current.correct) { hits++; next(); }
+            else showFine(`ERROR: Clasificación incorrecta.`);
+        }
+
+        function showFine(msg) {
+            errors++;
+            const fine = Math.floor(1000 + Math.random() * 49000);
+            totalFine += fine;
+            document.getElementById('multa-msg').innerText = msg;
+            document.getElementById('multa-amount').innerText = `B/. ${fine.toLocaleString()}`;
+            document.getElementById('modal-multa').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+            next();
+        }
+
+        function next() {
+            currentIndex++;
+            updateStats();
+            renderCard();
+        }
+
+        function updateStats() {
+            document.getElementById('score-hits').innerText = hits;
+            document.getElementById('score-errors').innerText = errors;
+            document.getElementById('score-fines').innerText = `B/. ${totalFine.toLocaleString()}`;
+        }
+
+        function showFinal() {
+            document.getElementById('final-hits').innerText = hits;
+            document.getElementById('final-errors').innerText = errors;
+            document.getElementById('modal-final').style.display = 'flex';
+        }
+
+        let startX, startY;
+        function handleTouchStart(e) {
+            const t = e.touches[0];
+            startX = t.clientX; startY = t.clientY;
+            draggedElement = e.currentTarget;
+            draggedElement.style.transition = "none";
+        }
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const t = e.touches[0];
+            const dx = t.clientX - startX, dy = t.clientY - startY;
+            draggedElement.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx/25}deg)`;
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const zone = el?.closest('.drop-zone');
+            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+            if(zone) zone.classList.add('drag-over');
+        }
+        function handleTouchEnd(e) {
+            const t = e.changedTouches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const zone = el?.closest('.drop-zone');
+            if (zone) process(zone.dataset.zone);
+            else draggedElement.style.transform = "none";
+            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
