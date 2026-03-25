@@ -47,19 +47,18 @@
             flex-grow: 1;
             display: flex;
             flex-direction: column;
-            padding: 1rem;
-            gap: 1rem;
+            padding: 0.75rem;
+            gap: 0.75rem;
             overflow: hidden;
         }
 
-        /* Responsive Grid Logic */
+        /* Lógica Responsiva */
         @media (min-width: 1024px) {
             .main-content {
                 display: grid;
                 grid-template-columns: 250px 1fr 250px;
                 align-items: center;
             }
-            .zones-left, .zones-right { display: flex; flex-direction: column; gap: 1rem; height: 100%; }
         }
 
         @media (max-width: 1023px) {
@@ -68,7 +67,7 @@
                 grid-template-columns: 1fr 1fr;
                 grid-template-rows: 1fr 1fr;
                 gap: 0.5rem;
-                height: 45vh;
+                height: 40vh;
                 flex-shrink: 0;
             }
             .deck-area {
@@ -81,7 +80,7 @@
 
         .drop-zone {
             transition: all 0.2s ease;
-            border: 2px solid transparent;
+            border: 3px solid transparent;
             display: flex;
             flex-direction: column;
             justify-content: center;
@@ -94,7 +93,7 @@
         .drop-zone.drag-over {
             transform: scale(1.05);
             border-color: #38bdf8;
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.4);
+            box-shadow: 0 0 25px rgba(56, 189, 248, 0.5);
             filter: brightness(1.2);
         }
 
@@ -104,9 +103,10 @@
             background: #1e293b;
             border: 1px solid #475569;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            width: 90%;
-            max-width: 400px;
+            width: 85%;
+            max-width: 380px;
             z-index: 50;
+            position: relative;
         }
 
         .modal-overlay {
@@ -132,7 +132,7 @@
 
     <div class="app-wrapper">
         
-        <!-- HEADER -->
+        <!-- ENCABEZADO -->
         <header class="header-panel p-3 md:px-10 flex justify-between items-center shadow-xl">
             <div class="flex flex-col">
                 <h1 class="text-sm md:text-xl font-black text-sky-400 uppercase tracking-tighter">Libro XVIII</h1>
@@ -155,40 +155,36 @@
             </div>
         </header>
 
-        <!-- MAIN -->
+        <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
             
-            <!-- DECK AREA (TOP ON MOBILE) -->
+            <!-- ÁREA DEL MAZO -->
             <div class="deck-area">
                 <div id="card-deck" class="w-full flex justify-center">
-                    <!-- Cards injected here -->
+                    <!-- Las cartas se inyectan aquí -->
                 </div>
             </div>
 
-            <!-- ZONES CONTAINER (BOTTOM ON MOBILE, SIDES ON DESKTOP) -->
+            <!-- CONTENEDOR DE ZONAS -->
             <div class="zones-container w-full grid grid-cols-2 lg:contents gap-2">
                 
-                <!-- BLANCO -->
                 <div id="target-blanca" class="drop-zone bg-white lg:h-48" data-zone="blanca">
-                    <span class="text-xl md:text-3xl">⚪</span>
+                    <span class="text-2xl md:text-3xl">⚪</span>
                     <h3 class="text-slate-900 font-black text-[9px] md:text-xs uppercase mt-1">Inspección</h3>
                 </div>
 
-                <!-- VERDE -->
                 <div id="target-verde" class="drop-zone bg-emerald-500 lg:h-48" data-zone="verde">
-                    <span class="text-xl md:text-3xl">🟢</span>
+                    <span class="text-2xl md:text-3xl">🟢</span>
                     <h3 class="text-white font-black text-[9px] md:text-xs uppercase mt-1">Reparación</h3>
                 </div>
 
-                <!-- ROJO -->
                 <div id="target-roja" class="drop-zone bg-rose-600 lg:h-48" data-zone="roja">
-                    <span class="text-xl md:text-3xl">🔴</span>
+                    <span class="text-2xl md:text-3xl">🔴</span>
                     <h3 class="text-white font-black text-[9px] md:text-xs uppercase mt-1">Rechazado</h3>
                 </div>
 
-                <!-- AMARILLO -->
                 <div id="target-amarilla" class="drop-zone bg-amber-400 lg:h-48" data-zone="amarilla">
-                    <span class="text-xl md:text-3xl">🟡</span>
+                    <span class="text-2xl md:text-3xl">🟡</span>
                     <h3 class="text-amber-950 font-black text-[9px] md:text-xs uppercase mt-1">Retorno</h3>
                 </div>
 
@@ -203,18 +199,17 @@
         </footer>
     </div>
 
-    <!-- MODAL MULTA -->
+    <!-- MODALES -->
     <div id="modal-multa" class="modal-overlay">
         <div class="bg-slate-900 border-t-4 border-rose-600 rounded-2xl p-6 md:p-10 max-w-sm w-full text-center">
             <div class="text-6xl mb-4 hammer-anim">🔨</div>
             <h2 class="text-xl font-black text-rose-500 uppercase mb-2">Multa AAC</h2>
-            <p id="multa-msg" class="text-slate-300 text-xs mb-4"></p>
-            <p id="multa-amount" class="text-3xl font-black text-white mb-6"></p>
-            <button onclick="closeModal('modal-multa')" class="w-full py-3 bg-rose-600 text-white font-bold rounded-xl uppercase text-xs">Aceptar</button>
+            <p id="multa-msg" class="text-slate-300 text-[10px] md:text-xs mb-4"></p>
+            <p id="multa-amount" class="text-2xl md:text-3xl font-black text-white mb-6"></p>
+            <button onclick="closeModal('modal-multa')" class="w-full py-3 bg-rose-600 text-white font-bold rounded-xl uppercase text-[10px] md:text-xs">Aceptar</button>
         </div>
     </div>
 
-    <!-- MODAL FINAL -->
     <div id="modal-final" class="modal-overlay">
         <div class="bg-slate-900 border-2 border-sky-500/30 rounded-3xl p-8 max-w-sm w-full text-center">
             <div class="text-5xl mb-4">✈️</div>
@@ -229,7 +224,7 @@
                     <p id="final-errors" class="text-2xl font-black">0</p>
                 </div>
             </div>
-            <button onclick="location.reload()" class="w-full py-4 bg-sky-600 text-white font-bold rounded-full uppercase text-xs">Reiniciar</button>
+            <button onclick="location.reload()" class="w-full py-4 bg-sky-600 text-white font-bold rounded-full uppercase text-[10px]">Reiniciar</button>
         </div>
     </div>
 
@@ -271,7 +266,7 @@
 
         function init() {
             renderCard();
-            setupZones();
+            setupDesktopDrop();
         }
 
         function renderCard() {
@@ -282,22 +277,24 @@
             document.getElementById('case-counter').innerText = `EXP ${currentIndex + 1}/30`;
             
             container.innerHTML = `
-                <div id="active-card" class="case-card p-4 md:p-6 rounded-2xl flex flex-col relative" draggable="true">
-                    <h4 class="text-sm md:text-lg font-black text-white mb-2 uppercase italic border-b border-slate-700 pb-1 leading-tight">${c.title}</h4>
-                    <p class="text-slate-300 text-[10px] md:text-xs leading-relaxed mb-4">${c.desc}</p>
+                <div id="active-card" class="case-card p-4 rounded-2xl flex flex-col" draggable="true">
+                    <h4 class="text-sm font-black text-white mb-2 uppercase italic border-b border-slate-700 pb-1 leading-tight">${c.title}</h4>
+                    <p class="text-slate-300 text-[10px] leading-relaxed mb-4">${c.desc}</p>
                     <div class="mt-auto py-1 text-center border-t border-slate-700/50">
-                        <span class="text-[8px] text-slate-500 font-bold uppercase">Arrastra para clasificar</span>
+                        <span class="text-[8px] text-slate-500 font-bold uppercase">Desliza para clasificar</span>
                     </div>
                 </div>
             `;
 
             const card = document.getElementById('active-card');
+            
+            // Eventos Táctiles (CRÍTICO PARA MÓVIL)
             card.addEventListener('touchstart', handleTouchStart, {passive: false});
             card.addEventListener('touchmove', handleTouchMove, {passive: false});
             card.addEventListener('touchend', handleTouchEnd);
         }
 
-        function setupZones() {
+        function setupDesktopDrop() {
             document.querySelectorAll('.drop-zone').forEach(zone => {
                 zone.addEventListener('dragover', e => e.preventDefault());
                 zone.addEventListener('drop', e => process(zone.dataset.zone));
@@ -347,6 +344,7 @@
             document.getElementById('modal-final').style.display = 'flex';
         }
 
+        // LÓGICA TÁCTIL REPARADA
         let startX, startY;
         function handleTouchStart(e) {
             const t = e.touches[0];
@@ -354,22 +352,39 @@
             draggedElement = e.currentTarget;
             draggedElement.style.transition = "none";
         }
+
         function handleTouchMove(e) {
             e.preventDefault();
             const t = e.touches[0];
             const dx = t.clientX - startX, dy = t.clientY - startY;
             draggedElement.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx/25}deg)`;
+            
+            // HACER LA CARTA "INVISIBLE" AL PUNTERO PARA DETECTAR LO QUE HAY DETRÁS
+            draggedElement.style.pointerEvents = 'none';
             const el = document.elementFromPoint(t.clientX, t.clientY);
+            draggedElement.style.pointerEvents = 'auto';
+
             const zone = el?.closest('.drop-zone');
             document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
             if(zone) zone.classList.add('drag-over');
         }
+
         function handleTouchEnd(e) {
             const t = e.changedTouches[0];
+            
+            // VOLVER A HACER INVISIBLE PARA LA DETECCIÓN FINAL
+            draggedElement.style.pointerEvents = 'none';
             const el = document.elementFromPoint(t.clientX, t.clientY);
+            draggedElement.style.pointerEvents = 'auto';
+
             const zone = el?.closest('.drop-zone');
-            if (zone) process(zone.dataset.zone);
-            else draggedElement.style.transform = "none";
+
+            if (zone) {
+                process(zone.dataset.zone);
+            } else {
+                draggedElement.style.transition = "transform 0.3s ease";
+                draggedElement.style.transform = "none";
+            }
             document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
         }
 
