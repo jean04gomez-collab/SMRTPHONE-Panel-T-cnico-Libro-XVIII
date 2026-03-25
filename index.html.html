@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador Libro XVIII - Gestión de Taller</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600;800&display=swap');
+
+        :root {
+            --blanco: #f8fafc;
+            --verde: #22c55e;
+            --rojo: #ef4444;
+            --amarillo: #eab308;
+            --hangar-bg: #0f172a;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: var(--hangar-bg);
+            font-family: 'Inter', sans-serif;
+            color: #f1f5f9;
+        }
+
+        /* Contenedor principal para evitar scroll */
+        .app-wrapper {
+            display: grid;
+            grid-template-rows: 12vh 1fr 5vh;
+            height: 100vh;
+            width: 100vw;
+            background-image: 
+                linear-gradient(rgba(15, 23, 42, 0.97), rgba(15, 23, 42, 0.97)),
+                url('https://www.transparenttextures.com/patterns/carbon-fibre.png');
+        }
+
+        .header-panel {
+            font-family: 'Orbitron', sans-serif;
+            background: rgba(30, 41, 59, 0.9);
+            border-bottom: 2px solid #334155;
+            z-index: 10;
+        }
+
+        .drop-zone {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 3px solid transparent;
+            height: 100%;
+        }
+
+        .drop-zone.drag-over {
+            transform: scale(1.02);
+            filter: brightness(1.2);
+            border-color: #38bdf8;
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+        }
+
+        .case-card {
+            touch-action: none;
+            user-select: none;
+            cursor: grab;
+            transition: transform 0.1s, opacity 0.2s;
+            background: #1e293b;
+            border: 1px solid #475569;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+            width: 90%;
+            max-width: 450px;
+        }
+
+        .case-card:active { cursor: grabbing; }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(8px);
+        }
+
+        @keyframes slam {
+            0% { transform: scale(2) rotate(-20deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .hammer-animation {
+            animation: slam 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .status-badge {
+            font-size: 0.65rem;
+            letter-spacing: 0.1em;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        
+        <!-- CABECERA (12vh) -->
+        <header class="header-panel px-10 flex justify-between items-center shadow-xl">
+            <div class="flex flex-col">
+                <h1 class="text-xl lg:text-2xl font-black text-sky-400 uppercase tracking-tighter">Panel Técnico: Libro XVIII</h1>
+                <div class="flex gap-3 mt-1">
+                    <span id="case-counter" class="text-[10px] text-sky-500 font-bold bg-sky-500/10 px-2 py-1 rounded">AUDITORÍA 1 / 30</span>
+                    <span class="text-[10px] text-slate-400 font-mono flex items-center gap-1">RACP PANAMÁ</span>
+                </div>
+            </div>
+
+            <div class="flex gap-6 items-center bg-slate-900/80 p-3 rounded-2xl border border-slate-700">
+                <div class="text-center px-4">
+                    <p class="text-[9px] text-emerald-500 font-bold uppercase">Cumplimiento</p>
+                    <p id="score-hits" class="text-2xl font-black">0</p>
+                </div>
+                <div class="w-[1px] h-10 bg-slate-700"></div>
+                <div class="text-center px-4">
+                    <p class="text-[9px] text-rose-500 font-bold uppercase">Infracciones</p>
+                    <p id="score-errors" class="text-2xl font-black">0</p>
+                </div>
+                <div class="w-[1px] h-10 bg-slate-700"></div>
+                <div class="text-center min-w-[120px] px-4">
+                    <p class="text-[9px] text-amber-500 font-bold uppercase">Multas Acumuladas</p>
+                    <p id="score-fines" class="text-lg font-black text-amber-400">B/. 0</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- CUERPO DE LA APP (83vh aprox) -->
+        <main class="grid grid-cols-12 gap-4 p-4 overflow-hidden">
+            
+            <!-- BUZONES IZQUIERDA -->
+            <div class="col-span-3 grid grid-rows-2 gap-4">
+                <!-- BLANCO -->
+                <div id="target-blanca" class="drop-zone bg-white rounded-2xl p-5 flex flex-col shadow-lg" data-zone="blanca">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">⚪</span>
+                        <h3 class="text-slate-900 font-black text-xs uppercase leading-none">Inspección /<br>Calibración</h3>
+                    </div>
+                    <div class="flex-1 border-2 border-dashed border-slate-200 rounded-xl bg-slate-50 flex items-center justify-center opacity-30 pointer-events-none text-slate-400 text-[10px] font-bold">SOLTAR AQUÍ</div>
+                </div>
+                <!-- VERDE -->
+                <div id="target-verde" class="drop-zone bg-emerald-500 rounded-2xl p-5 flex flex-col shadow-lg" data-zone="verde">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">🟢</span>
+                        <h3 class="text-white font-black text-xs uppercase leading-none">Reparación /<br>Servicio</h3>
+                    </div>
+                    <div class="flex-1 border-2 border-dashed border-white/20 rounded-xl bg-white/5 flex items-center justify-center opacity-30 pointer-events-none text-white text-[10px] font-bold">SOLTAR AQUÍ</div>
+                </div>
+            </div>
+
+            <!-- CENTRO: MAZO -->
+            <div class="col-span-6 flex flex-col items-center justify-center gap-6">
+                <div id="card-deck" class="w-full h-full flex items-center justify-center">
+                    <!-- Cards are injected here -->
+                </div>
+            </div>
+
+            <!-- BUZONES DERECHA -->
+            <div class="col-span-3 grid grid-rows-2 gap-4">
+                <!-- ROJO -->
+                <div id="target-roja" class="drop-zone bg-rose-600 rounded-2xl p-5 flex flex-col shadow-lg" data-zone="roja">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">🔴</span>
+                        <h3 class="text-white font-black text-xs uppercase leading-none">Rechazado /<br>Inservible</h3>
+                    </div>
+                    <div class="flex-1 border-2 border-dashed border-white/20 rounded-xl bg-white/5 flex items-center justify-center opacity-30 pointer-events-none text-white text-[10px] font-bold">SOLTAR AQUÍ</div>
+                </div>
+                <!-- AMARILLO -->
+                <div id="target-amarilla" class="drop-zone bg-amber-400 rounded-2xl p-5 flex flex-col shadow-lg" data-zone="amarilla">
+                    <div class="flex items-center gap-3 mb-2">
+                        <span class="text-3xl">🟡</span>
+                        <h3 class="text-amber-950 font-black text-xs uppercase leading-none">Retorno al<br>Servicio</h3>
+                    </div>
+                    <div class="flex-1 border-2 border-dashed border-amber-900/10 rounded-xl bg-amber-900/5 flex items-center justify-center opacity-30 pointer-events-none text-amber-900 text-[10px] font-bold">SOLTAR AQUÍ</div>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- FOOTER (5vh) -->
+        <footer class="bg-slate-900/50 flex items-center justify-center border-t border-slate-800">
+            <p class="text-[9px] text-slate-500 uppercase tracking-[0.4em] font-semibold">
+                Gestión de Mantenimiento Aeronáutico • Autoridad Aeronáutica Civil de Panamá
+            </p>
+        </footer>
+    </div>
+
+    <!-- MODAL DE MULTA -->
+    <div id="modal-multa" class="modal-overlay">
+        <div class="bg-slate-900 border-t-8 border-rose-600 rounded-3xl p-10 max-w-xl w-full text-center shadow-2xl">
+            <div class="text-8xl mb-6 hammer-animation">🔨</div>
+            <h2 class="text-3xl font-black text-rose-500 uppercase mb-4">Sanción de la AAC</h2>
+            <div class="bg-black/40 p-6 rounded-2xl mb-8 border border-slate-700">
+                <p id="multa-msg" class="text-slate-300 text-lg leading-relaxed mb-4"></p>
+                <p id="multa-amount" class="text-5xl font-black text-white"></p>
+                <span class="text-rose-400 text-[10px] uppercase block mt-2 tracking-widest">Infracción Art. 219 - Ley 21</span>
+            </div>
+            <button onclick="closeModal('modal-multa')" class="w-full py-5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl transition-all uppercase tracking-widest">Reconocer Error</button>
+        </div>
+    </div>
+
+    <!-- MODAL FINAL -->
+    <div id="modal-final" class="modal-overlay">
+        <div class="bg-slate-900 border-2 border-sky-500/30 rounded-[40px] p-12 max-w-2xl w-full text-center shadow-2xl">
+            <div class="text-7xl mb-6">🏁</div>
+            <h2 class="text-4xl font-black text-sky-400 uppercase mb-8">Auditoría Finalizada</h2>
+            <div class="grid grid-cols-3 gap-4 mb-8">
+                <div class="bg-emerald-500/10 p-6 rounded-2xl">
+                    <p class="text-[10px] text-emerald-500 font-bold uppercase mb-1">Éxitos</p>
+                    <p id="final-hits" class="text-3xl font-black">0</p>
+                </div>
+                <div class="bg-rose-500/10 p-6 rounded-2xl">
+                    <p class="text-[10px] text-rose-500 font-bold uppercase mb-1">Fallos</p>
+                    <p id="final-errors" class="text-3xl font-black">0</p>
+                </div>
+                <div class="bg-amber-500/10 p-6 rounded-2xl">
+                    <p class="text-[10px] text-amber-500 font-bold uppercase mb-1">Deuda</p>
+                    <p id="final-fines" class="text-xl font-black">B/. 0</p>
+                </div>
+            </div>
+            <div class="p-6 bg-slate-800 rounded-xl mb-8 text-left border-l-4 border-sky-500">
+                <p class="text-slate-300 text-sm italic">"El Jefe de Taller es responsable de cada componente que sale del hangar (Art. 95 Libro XVIII)."</p>
+            </div>
+            <button onclick="location.reload()" class="px-12 py-4 bg-sky-600 hover:bg-sky-500 text-white font-bold rounded-full transition-all uppercase">Reiniciar Auditoría</button>
+        </div>
+    </div>
+
+    <script>
+        const cases = [
+            { id: 1, title: "Radio COM1", desc: "Radio nuevo recibido de fábrica. No tiene registro de inspección de entrada en el Taller.", correct: "blanca" },
+            { id: 2, title: "Bomba Lycoming", desc: "Bomba de combustible con fuga activa de fluido detectada en inspección visual.", correct: "verde" },
+            { id: 3, title: "Perno de Ala", desc: "Perno estructural con fractura por fatiga irreparable según SB 1304A.", correct: "roja" },
+            { id: 4, title: "Altímetro Digital", desc: "Instrumento con calibración de Apéndice 3 satisfactoria y Formulario AAC 8130-3.", correct: "amarilla" },
+            { id: 5, title: "FIRMA ILEGAL", desc: "Se intenta firmar un RTS de reparación mayor sin datos aprobados, solo por presión del cliente.", correct: "multa" },
+            { id: 6, title: "Neumático Michelin", desc: "Neumático de tren principal con desgaste por debajo de límites. Requiere reemplazo.", correct: "verde" },
+            { id: 7, title: "Línea de Vida", desc: "Manguera de alta presión que ha superado su fecha de expiración instalada.", correct: "roja" },
+            { id: 8, title: "Indicador Giro", desc: "Componente con rotor interno destruido, sin capacidad técnica de reparación en el taller.", correct: "roja" },
+            { id: 9, title: "Motor Continental", desc: "Motor tras Overhaul probado en banco con parámetros correctos de fábrica.", correct: "amarilla" },
+            { id: 10, title: "Magneto Bendix", desc: "Magneto nuevo recibido con empaque abierto y sin sello de inspección técnica.", correct: "blanca" },
+            { id: 11, title: "Hélice de Aluminio", desc: "Hélice con picaduras por erosión que requiere rectificación mecánica.", correct: "verde" },
+            { id: 12, title: "DATOS INVÁLIDOS", desc: "Reparación mayor estructural basada en tutoriales de video, no en manuales aprobados.", correct: "multa" },
+            { id: 13, title: "LLAVE DINAMOMÉTRICA", desc: "Uso de herramienta sin calibrar para el torque de pernos críticos del motor.", correct: "multa" },
+            { id: 14, title: "BITÁCORA FALSA", desc: "Firmas en registros de personal que no realizó el mantenimiento.", correct: "multa" },
+            { id: 15, title: "DIRECTRIZ (AD)", desc: "Se omite una Directriz de Aeronavegabilidad obligatoria durante la inspección.", correct: "multa" },
+            { id: 16, title: "Larguerillo Ala", desc: "Corrosión Nivel 3 (exfoliante) que excede límites estructurales del manual.", correct: "roja" },
+            { id: 17, title: "Filtros de Aire", desc: "Filtros limpiados e inspeccionados, listos para reinstalación inmediata.", correct: "amarilla" },
+            { id: 18, title: "Tren de Aterrizaje", desc: "Perno de fijación con fractura cristalina profunda detectada por tintas.", correct: "roja" },
+            { id: 19, title: "Arnés Piloto", desc: "Reemplazo de cinturones completado siguiendo la TSO correspondiente.", correct: "amarilla" },
+            { id: 20, title: "Asientos Cabina", desc: "Tapicería reparada con material ignífugo certificado por el fabricante.", correct: "amarilla" },
+            { id: 21, title: "Estructura Fuselaje", desc: "Estructura en proceso de aplicación de anticorrosivo Alodine.", correct: "verde" },
+            { id: 22, title: "Anual 100 Horas", desc: "Inspección periódica completada y discrepancias cerradas por el inspector.", correct: "amarilla" },
+            { id: 23, title: "Pieza SUP", desc: "Componente de origen desconocido sin documentos de trazabilidad.", correct: "roja" },
+            { id: 24, title: "Radio VHF", desc: "Transmisor con deriva de frecuencia detectada. Pendiente de ajuste.", correct: "blanca" },
+            { id: 25, title: "Cilindro Motor", desc: "Cilindro con baja compresión enviado a sección de rectificado.", correct: "verde" },
+            { id: 26, title: "Actuador Flaps", desc: "Componente con fuga de líquido hidráulico por sellos degradados.", correct: "verde" },
+            { id: 27, title: "HÉLICE MODIFICADA", desc: "Pala cortada por taller no habilitado para esa clase de trabajo.", correct: "multa" },
+            { id: 28, title: "Bujías Motor", desc: "Bujías limpias, probadas en banco y con luz de electrodos ajustada.", correct: "amarilla" },
+            { id: 29, title: "REGISTRO SIN FIRMA", desc: "Bitácora llena pero sin número de licencia del técnico responsable.", correct: "multa" },
+            { id: 30, title: "AHORRO EN REPUESTOS", desc: "Director omite compra de pernos originales usando tornillos ferreteros.", correct: "multa" }
+        ];
+
+        let currentIndex = 0, hits = 0, errors = 0, totalFine = 0, draggedElement = null;
+
+        function init() {
+            renderCard();
+            setupZones();
+        }
+
+        function renderCard() {
+            const container = document.getElementById('card-deck');
+            if (currentIndex >= cases.length) { showFinal(); return; }
+
+            const c = cases[currentIndex];
+            document.getElementById('case-counter').innerText = `AUDITORÍA ${currentIndex + 1} / 30`;
+            
+            container.innerHTML = `
+                <div id="active-card" class="case-card p-6 rounded-3xl flex flex-col relative" draggable="true">
+                    <span class="status-badge bg-sky-500/10 text-sky-400 mb-2 w-fit">EXPEDIENTE #${c.id}</span>
+                    <h4 class="text-xl font-black text-white mb-4 uppercase italic border-b border-slate-700 pb-2 leading-tight">${c.title}</h4>
+                    <p class="text-slate-300 text-sm leading-relaxed mb-6">${c.desc}</p>
+                    <div class="mt-auto py-2 text-center border-t border-slate-700/50">
+                        <span class="text-[9px] text-slate-500 font-bold uppercase tracking-widest">Arrastre para clasificar</span>
+                    </div>
+                </div>
+            `;
+
+            const card = document.getElementById('active-card');
+            card.addEventListener('dragstart', (e) => { e.target.style.opacity = "0.4"; });
+            card.addEventListener('dragend', (e) => { e.target.style.opacity = "1"; });
+            card.addEventListener('touchstart', handleTouchStart, {passive: false});
+            card.addEventListener('touchmove', handleTouchMove, {passive: false});
+            card.addEventListener('touchend', handleTouchEnd);
+        }
+
+        function setupZones() {
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', e => e.preventDefault());
+                zone.addEventListener('dragenter', () => zone.classList.add('drag-over'));
+                zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+                zone.addEventListener('drop', e => {
+                    zone.classList.remove('drag-over');
+                    process(zone.dataset.zone);
+                });
+            });
+        }
+
+        function process(zoneType) {
+            const current = cases[currentIndex];
+            
+            if (current.correct === "multa") {
+                if (zoneType === 'amarilla') {
+                    showFine("INTENTO DE RETORNO AL SERVICIO ILEGAL. Se han violado protocolos críticos de aeronavegabilidad.");
+                } else {
+                    hits++; next();
+                }
+                return;
+            }
+
+            if (zoneType === current.correct) {
+                hits++; next();
+            } else {
+                showFine(`ERROR TÉCNICO: Clasificación errónea del componente "${current.title}".`);
+            }
+            updateStats();
+        }
+
+        function showFine(msg) {
+            errors++;
+            const fine = Math.floor(1000 + Math.random() * 49000);
+            totalFine += fine;
+            document.getElementById('multa-msg').innerText = msg;
+            document.getElementById('multa-amount').innerText = `B/. ${fine.toLocaleString()}`;
+            document.getElementById('modal-multa').style.display = 'flex';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+            next();
+        }
+
+        function next() {
+            currentIndex++;
+            updateStats();
+            renderCard();
+        }
+
+        function updateStats() {
+            document.getElementById('score-hits').innerText = hits;
+            document.getElementById('score-errors').innerText = errors;
+            document.getElementById('score-fines').innerText = `B/. ${totalFine.toLocaleString()}`;
+        }
+
+        function showFinal() {
+            document.getElementById('final-hits').innerText = hits;
+            document.getElementById('final-errors').innerText = errors;
+            document.getElementById('final-fines').innerText = `B/. ${totalFine.toLocaleString()}`;
+            document.getElementById('modal-final').style.display = 'flex';
+        }
+
+        // TOUCH HANDLING
+        let startX, startY;
+        function handleTouchStart(e) {
+            const t = e.touches[0];
+            startX = t.clientX; startY = t.clientY;
+            draggedElement = e.currentTarget;
+        }
+        function handleTouchMove(e) {
+            e.preventDefault();
+            const t = e.touches[0];
+            const dx = t.clientX - startX, dy = t.clientY - startY;
+            draggedElement.style.transform = `translate(${dx}px, ${dy}px) rotate(${dx/25}deg)`;
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const zone = el?.closest('.drop-zone');
+            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+            if(zone) zone.classList.add('drag-over');
+        }
+        function handleTouchEnd(e) {
+            const t = e.changedTouches[0];
+            const el = document.elementFromPoint(t.clientX, t.clientY);
+            const zone = el?.closest('.drop-zone');
+            if (zone) { process(zone.dataset.zone); }
+            else { draggedElement.style.transform = "none"; }
+            document.querySelectorAll('.drop-zone').forEach(z => z.classList.remove('drag-over'));
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
